@@ -1,0 +1,548 @@
+{
+  "info": {
+    "name": "SmartTicket v2 - TP9 GRASP y SOLID (mejorado)",
+    "description": "Demostración académica: primero 01-05. Pago usa tokens de prueba, GET venta requiere X-Venta-Token. La venta Pendiente vence tras 15 minutos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.collectionVariables.set(\"hoy\", new Date().toLocaleDateString(\"sv-SE\", { timeZone: \"America/Argentina/Buenos_Aires\" }));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "lugar_id",
+      "value": "1"
+    },
+    {
+      "key": "sector_platea_id",
+      "value": "1"
+    },
+    {
+      "key": "sector_vip_id",
+      "value": "2"
+    },
+    {
+      "key": "cliente_id",
+      "value": "1"
+    },
+    {
+      "key": "evento_id",
+      "value": "1"
+    },
+    {
+      "key": "venta_pendiente_id",
+      "value": "2"
+    },
+    {
+      "key": "qr_emitido",
+      "value": "QR_SE_GENERA_TRAS_PAGO"
+    },
+    {
+      "key": "hoy",
+      "value": "2026-11-05"
+    },
+    {
+      "key": "venta_token",
+      "value": "TOKEN_RETORNADO_POR_PAGO"
+    },
+    {
+      "key": "asiento_id",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 - Preparación del dominio",
+      "item": [
+        {
+          "name": "01 Crear Lugar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/lugares",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Estadio Postman\",\n  \"direccion\": \"Avenida 99\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"lugar_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Crear Platea (capacidad 5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sectores",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lugar_id\": {{lugar_id}},\n  \"nombre\": \"Platea\",\n  \"capacidad\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"sector_platea_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Crear VIP (capacidad 1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/sectores",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lugar_id\": {{lugar_id}},\n  \"nombre\": \"VIP\",\n  \"capacidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"sector_vip_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Crear Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/clientes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana\",\n  \"email\": \"ana.postman@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"cliente_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Crear Evento y generar entradas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/eventos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lugar_id\": {{lugar_id}},\n  \"nombre\": \"Rock Fest Postman\",\n  \"fecha\": \"{{hoy}}\",\n  \"precios\": [\n    {\n      \"sector_id\": {{sector_platea_id}},\n      \"precio\": \"12000\"\n    },\n    {\n      \"sector_id\": {{sector_vip_id}},\n      \"precio\": \"50000\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"evento_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Disponibilidad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/eventos/{{evento_id}}/disponibilidad"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - HU1, HU2, HU3",
+      "item": [
+        {
+          "name": "07 Cotización exitosa ($24000)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/cotizar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_platea_id}},\n  \"cantidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "08 Cotización VIP sin stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/cotizar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_vip_id}},\n  \"cantidad\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "09 Cotización cantidad cero",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/cotizar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_platea_id}},\n  \"cantidad\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "10 Pago aprobado y capturar QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/iniciar-pago",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_platea_id}},\n  \"cantidad\": 2,\n  \"tarjeta_token\": \"tok_aprobada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) { const j=pm.response.json(); pm.collectionVariables.set(\"qr_emitido\",j.entradas[0].codigo_qr); pm.collectionVariables.set(\"venta_pagada_id\",j.venta_id); pm.collectionVariables.set(\"venta_token\",j.token_consulta); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 Pago rechazado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/iniciar-pago",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_platea_id}},\n  \"cantidad\": 1,\n  \"tarjeta_token\": \"tok_rechazada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "12 Pago pendiente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/iniciar-pago",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_platea_id}},\n  \"cantidad\": 1,\n  \"tarjeta_token\": \"tok_pendiente\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) { const j=pm.response.json(); pm.collectionVariables.set(\"venta_pendiente_id\",j.venta_id); pm.collectionVariables.set(\"venta_token\",j.token_consulta); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 Webhook aprobar pendiente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Webhook-Secret",
+                "value": "solo-demostracion-cambiar"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/webhook-pagos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venta_id\": {{venta_pendiente_id}},\n  \"resultado\": \"APROBADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "14 Escanear entrada emitida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/escanear-acceso",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo_qr\": \"{{qr_emitido}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "15 Escanear QR falso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/escanear-acceso",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo_qr\": \"codigo-no-existente\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "16 Consultar venta pagada con token (QR protegido)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Venta-Token",
+                "value": "{{venta_token}}"
+              }
+            ],
+            "url": "{{base_url}}/ventas/{{venta_pagada_id}}"
+          }
+        },
+        {
+          "name": "17 Listar asientos disponibles sin QR",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/eventos/{{evento_id}}/sectores/{{sector_platea_id}}/entradas"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 && pm.response.json().length > 0) pm.collectionVariables.set(\"asiento_id\", pm.response.json()[0].entrada_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18 Cotizar 1 asiento específico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/cotizar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_platea_id}},\n  \"cantidad\": 1,\n  \"entrada_ids\": [{{asiento_id}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "19 Pagar 1 asiento específico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/iniciar-pago",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"evento_id\": {{evento_id}},\n  \"sector_id\": {{sector_platea_id}},\n  \"cantidad\": 1,\n  \"entrada_ids\": [{{asiento_id}}],\n  \"tarjeta_token\": \"tok_aprobada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
